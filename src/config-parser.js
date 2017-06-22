@@ -437,7 +437,7 @@ export function createCompilers() {
     // devDependencies. If that's not the case, check to see if
     // electron-compilers is installed as a peer dependency (probably as a
     // devDependency of the root project).
-    const locations = ['electron-compilers', '../../electron-compilers'];
+    const locations = ['electron-compilers-ftl', '../../electron-compilers-ftl'];
 
     for (let location of locations) {
       try {

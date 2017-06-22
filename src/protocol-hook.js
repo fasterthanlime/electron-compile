@@ -106,7 +106,7 @@ export function initializeProtocolHook(compilerHost) {
   global[magicGlobalForRootCacheDir] = compilerHost.rootCacheDir;
   global[magicGlobalForAppRootDir] = compilerHost.appRoot;
 
-  const electronCompileSetupCode = `if (window.require) require('electron-compile/lib/initialize-renderer').initializeRendererProcess(${compilerHost.readOnlyMode});`;
+  const electronCompileSetupCode = `if (window.require) require('electron-compile-ftl/lib/initialize-renderer').initializeRendererProcess(${compilerHost.readOnlyMode});`;
 
   protocol.interceptBufferProtocol('file', async function(request, finish) {
     let uri = url.parse(request.url);

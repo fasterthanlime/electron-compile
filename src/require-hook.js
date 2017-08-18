@@ -5,26 +5,39 @@ let HMR = false;
 const d = require('debug')('electron-compile:require-hook');
 let electron = null;
 
-if (process.type === 'renderer') {
-  window.__hot = [];
+const inRenderer = process.type === 'renderer';
+const globalVariable = inRenderer ? window : global;
+
+{
+  globalVariable.__hot = [];
   electron = require('electron');
-  HMR = electron.remote.getGlobal('__electron_compile_hmr_enabled__');
+  const getGlobal = inRenderer ? ((key) => electron.remote.getGlobal(key)) : ((key) => global[key]);
 
-  if (HMR) {
-    electron.ipcRenderer.on('__electron-compile__HMR', () => {
-      d("Got HMR signal!");
-
-      // Reset the module cache
-      let cache = require('module')._cache;
-      let toEject = Object.keys(cache).filter(x => x && !x.match(/[\\\/](node_modules|.*\.asar)[\\\/]/i));
-      toEject.forEach(x => {
-        d(`Removing node module entry for ${x}`);
-        delete cache[x];
-      });
-
-      window.__hot.forEach(fn => fn());
-    });
+  if (inRenderer) {
+    HMR = getGlobal('__electron_compile_hmr_enabled__');
   }
+
+  // If HMR is truly disabled, the event won't fire anyway
+  // so it's safe to set up the listeners here
+  const listener = inRenderer ? electron.ipcRenderer : process;
+  listener.on('__electron-compile__HMR', () => {
+    d("Got HMR signal!");
+
+    // Reset the module cache
+    let cache = require('module')._cache;
+    let toEject = Object.keys(cache).filter(x => x && !x.match(/[\\\/](node_modules|.*\.asar)[\\\/]/i));
+
+    const blacklist = getGlobal('__electron_compile_hmr_blacklist__');
+    for (const item of blacklist) {
+      toEject = toEject.filter(x => !x.match(item))
+    }
+    toEject.forEach(x => {
+      d(`Removing node module entry for ${x}`);
+      delete cache[x];
+    });
+
+    globalVariable.__hot.forEach(fn => fn());
+  });
 }
 
 /**
@@ -36,12 +49,12 @@ if (process.type === 'renderer') {
  * @param  {CompilerHost} compilerHost  The compiler host to use for compilation.
  */
 export default function registerRequireExtension(compilerHost, isProduction) {
-  if (HMR) {
-    try {
-      require('module').prototype.hot = {
-        accept: (cb) => window.__hot.push(cb)
-      };
+  require('module').prototype.hot = {
+    accept: (cb) => globalVariable.__hot.push(cb)
+  };
 
+  if (inRenderer && HMR) {
+    try {
       require.main.require('react-hot-loader/patch');
     } catch (e) {
       console.error(`Couldn't require react-hot-loader/patch, you need to add react-hot-loader@3 as a dependency! ${e.message}`);

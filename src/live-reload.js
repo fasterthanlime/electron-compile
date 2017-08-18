@@ -15,13 +15,13 @@ import 'rxjs/add/operator/switchMap';
 import 'rxjs/add/operator/timeout';
 
 export function enableLiveReload(options={}) {
-  let { strategy } = options;
+  let { strategy, blacklist = [] } = options;
 
   if (process.type !== 'browser' || !global.globalCompilerHost) throw new Error("Call this from the browser process, right after initializing electron-compile");
 
   switch(strategy) {
   case 'react-hmr':
-    enableReactHMR();
+    enableReactHMR(blacklist);
     break;
   case 'naive':
   default:
@@ -64,12 +64,14 @@ function triggerHMRInRenderers() {
   BrowserWindow.getAllWindows().forEach((window) => {
     window.webContents.send('__electron-compile__HMR');
   });
+  process.emit('__electron-compile__HMR');
 
   return Promise.resolve(true);
 }
 
-function enableReactHMR() {
+function enableReactHMR(blacklist) {
   global.__electron_compile_hmr_enabled__ = true;
+  global.__electron_compile_hmr_blacklist__ = blacklist;
 
   let filesWeCareAbout = global.globalCompilerHost.listenToCompileEvents()
     .filter(x => !FileChangedCache.isInNodeModules(x.filePath));

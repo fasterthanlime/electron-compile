@@ -73,6 +73,7 @@ export declare class CompilerHost {
 
 export declare function enableLiveReload(options?: {
     strategy?: "react-hmr" | "naive";
+    blacklist?: string[];
 }): void;
 
 export declare function calculateDefaultCompileCacheDirectory(): string;

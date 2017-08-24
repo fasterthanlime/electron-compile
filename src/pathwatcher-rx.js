@@ -1,26 +1,35 @@
+import fs from 'fs';
 import {Observable} from 'rxjs/Observable';
 import {Subscription} from 'rxjs/Subscription';
-import {Gaze} from 'gaze';
 import LRU from 'lru-cache';
 
 import 'rxjs/add/operator/publish';
 
 export function watchPathDirect(directory) {
   return Observable.create((subj) => {
+    let watcher = null;
     let dead = false;
 
-    const watcher = new Gaze();
-    watcher.on('error', (err) => {
-      dead = true;
-      subj.error(err);
-    });
-    watcher.add(directory);
-    watcher.on('changed', (fileName) => {
-      if (dead) return;
-      subj.next({fileName, eventType: 'changed'});
-    });
+    try {
+      watcher = fs.watch(directory, {}, (eventType, fileName) => {
+        if (dead) return;
+        subj.next({eventType, fileName});
+      });
 
-    return new Subscription(() => { if (!dead) { watcher.close(); } });
+      watcher.on('error', (e) => {
+        dead = true;
+        subj.error(e);
+      });
+    } catch (e) {
+      dead = true;
+      if (e.code === "ENOENT") {
+        // that's ok, we just won't watch the non-existent directory
+      } else {
+        // if it's not that, let's log and continue
+        console.warn(e.message);
+      }
+    }
+    return new Subscription(() => { if (!dead && watcher) { watcher.close(); } });
   });
 }
 

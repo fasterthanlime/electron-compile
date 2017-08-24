@@ -1,6 +1,6 @@
 {
   "name": "electron-compile-ftl",
-  "version": "6.4.8",
+  "version": "6.4.9",
   "description": "Electron supporting package to compile JS and CSS in Electron applications",
   "scripts": {
     "doc": "esdoc -c ./esdoc.json",
